@@ -1,9 +1,9 @@
-name: CI/CD Pipeline
+name: Deploy to EC2
 
 on:
   push:
     branches:
-      - feature/sree
+      - feature/microservice-deploy-manual-and-github-actions
 
 jobs:
   deploy:
@@ -13,16 +13,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up SSH
+      - name: Setup SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
-          ssh-private-key: ${{ secrets.LAPTOP_VSCODE_SSH_PRIVATE_KEY }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Deploy to CentOS VM
+      - name: Rsync code to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no vagrant@192.168.56.60 << 'EOF'
-            cd /home/vagrant/DevOps-Local-Labs/vagrant-devops-project
-            git pull origin main
-            docker compose down
-            docker compose up --build -d
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" . ec2-user@<your-ec2-ip>:/home/ec2-user/app
+
+      - name: Deploy via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no ec2-user@<your-ec2-ip> << 'EOF'
+            cd /home/ec2-user/app
+            docker-compose up --build -d
           EOF
